@@ -1,8 +1,13 @@
 import copy
+try:
+    from functools import wraps
+except ImportError:
+    from django.utils.functional import wraps  # Python 2.4 fallback.
 from django import http
 from django.core.exceptions import ImproperlyConfigured
 from django.template import RequestContext, loader
 from django.utils.translation import ugettext_lazy as _
+from django.utils.decorators import available_attrs
 
 from utils import coerce_put_post
 
@@ -17,38 +22,34 @@ class View(object):
     
     method_names = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE']
 
-    @classmethod
-    def configure(cls, *args, **kwargs):
-        """
-        Constructor substitute. Called in the URLconf; can contain helpful extra
-        keyword arguments, and other things.
-        """
-        class SubClass(cls):
-            pass
-        for key, value in kwargs.items():
-            if key in cls.method_names:
-                raise TypeError("You tried to pass in the %s method name as a "
-                                "keyword argument to %s.configure(). Don't do that."
-                                % (key, cls.__name__))
-            if hasattr(cls, key):
-                setattr(SubClass, key, value)
-            else:
-                raise TypeError("%s() received an invalid keyword %r" % (
-                    self.__class__.__name__,
-                    key,
-                ))
-        return SubClass
     
     @classmethod
-    def as_view(cls, request, *args, **kwargs):
+    def as_view(cls, *initargs, **initkwargs):
         """
         Main entry point for a request-response process.
         """
-        self = cls()
-        self.request = request
-        self.args = args
-        self.kwargs = kwargs
-        return self.dispatch(request, *args, **kwargs)
+        def view(request, *args, **kwargs):
+            obj = cls()
+
+            for key, value in initkwargs.items():
+                if key in cls.method_names:
+                    raise TypeError("You tried to pass in the %s method name as a "
+                                    "keyword argument to %s(). Don't do that."
+                                    % (key, cls.__name__))
+                if hasattr(cls, key):
+                    setattr(obj, key, value)
+                else:
+                    raise TypeError("%s() received an invalid keyword %r" % (
+                            cls.__name__,
+                            key,
+                            ))
+
+            obj.request = request
+            obj.args = args
+            obj.kwargs = kwargs
+            return obj.dispatch(request, *args, **kwargs)
+        return wraps(cls.dispatch, assigned=available_attrs(cls.dispatch))(view)
+
     
     def dispatch(self, request, *args, **kwargs):
         # Try to dispatch to the right method for that; if it doesn't exist,
