@@ -21,6 +21,7 @@ Inherit your own class-based views from existing ones listed below:
     class AuthorDetail(class_based_views.DetailView):
         queryset = Author.objects.all()
 
+You can also use the **configure** class method as a shortcut.
 
 Declare your view in your URLs like you already do for classic views:
 
@@ -29,11 +30,11 @@ Declare your view in your URLs like you already do for classic views:
     
     urlpatterns = patterns('',
         url(r'^detail/author/(?P<pk>\d+)/$',
-            views.AuthorDetail(),
+            views.AuthorDetail.as_view,
             name="author_detail"),
     )
 
-Note: you must declare an **instance** of the class in your URLs, not the 
+Note: you must use the **as_view** method of the class in your URLs, not the
 class in order to avoid shared attributes across requests.
 
 
