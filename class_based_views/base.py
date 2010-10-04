@@ -33,8 +33,8 @@ class View(object):
             if hasattr(cls, key):
                 setattr(SubClass, key, value)
             else:
-                raise TypeError("%s() received an invalid keyword %r" % (
-                    self.__class__.__name__,
+                raise TypeError("%s.configure() received an invalid keyword %r" % (
+                    cls.__name__,
                     key,
                 ))
         return SubClass
